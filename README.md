@@ -1,7 +1,9 @@
 
 # System Reboot Scheduler
 
-Bash script to set up a cron job to reboot the system if the uptime exceeds a specified number of days or if the file `/var/run/reboot-required` exists. It is designed for system administrators who want to ensure their systems are regularly rebooted for maintenance or security updates.
+Bash script to set up a cron job to reboot the system if the uptime exceeds a specified number of days, or if the file `/var/run/reboot-required` exists.
+
+It is designed for system administrators who want to ensure their systems are regularly rebooted for maintenance or security updates.
 
 ## Features
 
@@ -28,7 +30,7 @@ Bash script to set up a cron job to reboot the system if the uptime exceeds a sp
     - `max_days`: The maximum number of days the system can be up before a reboot is scheduled.
     - `hour` (optional): The hour of the day when the reboot should occur (0-23). Default 1.
     - `min` (optional): The minute of the hour when the reboot should occur (0-59). Default 0.
-    - `dow` (optional): The day of the week when the reboot should occur (Sun, Mon, ..., Sat, OR 0-7 where 0 or 7 is Sunday). Default is '*' (any day).
+    - `dow` (optional): The day of the week when the reboot should occur (Sun, Mon, ..., Sat, OR 0-7 where 0 or 7 is Sunday). Default is '\*' (any day).
 
 ## Example
 
@@ -42,9 +44,11 @@ sudo reboot_required 7 3 0 Sun
 
 Contributions are welcome. Please open an issue or submit a pull request with your improvements.
 
+(https://github.com/Open-Technology-Foundation/reboot_required)
+
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the GPL3 License. See `LICENSE` for more information.
 
 ## Author
 
