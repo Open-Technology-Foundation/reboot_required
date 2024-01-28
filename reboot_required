@@ -70,7 +70,7 @@ if (( uptime_days > max_days )) || [[ -f $reboot_required_file ]]; then
   		"$cron_job_file" "$HOSTNAME" "$reboot_hour" "$reboot_min" \
   		"$([[ $reboot_dow == '*' ]] && echo -n '.' || echo " on ${reboot_dow}.")"
 else
-	printf "Host %s has been up for %s days.\n$reboot_required_file was not detected.\nReboot is therefore not required.\n" "$HOSTNAME" "$uptime_days"
+	printf "Host %s has been up for %s days.\nFile $reboot_required_file was not detected.\nReboot is therefore not required.\n" "$HOSTNAME" "$uptime_days"
 fi
 
 #fin
