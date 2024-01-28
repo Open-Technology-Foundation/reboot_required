@@ -1,68 +1,76 @@
 #!/bin/bash
 set -euo pipefail
 
-declare -i uptime_days=0 max_days=0 reboot_hour=1 reboot_min=0
-declare -- uptime='' reboot_dow='*' cron_job_file=/etc/cron.d/reboot_uptime_days_gt_max_days
-declare -a dow=( Sun Mon Tue Wed Thu Fri Sat Sun )
+declare -r PRG0=$(readlink -en -- "$0")
+declare -r PRG="${PRG0##*/}"
 
+declare -r  cron_job_file=/etc/cron.d/reboot_uptime_days_gt_max_days
+declare -r  reboot_required_file=/var/run/reboot-required
+declare -r  uptime_file=/proc/uptime
+declare -ar dow=( Sun Mon Tue Wed Thu Fri Sat Sun )
+
+declare -i uptime_days=0 max_days=0 reboot_hour=1 reboot_min=0
+declare -- uptime='' reboot_dow='*'
+
+# Help
 if (($# == 0)) || [[ "${1:-}" == '-h' || "${1:-}" == '--help' ]]; then
-	echo "usage: reboot_required max_days [hour=$reboot_hour [min=$reboot_min [dow=$reboot_dow]]]"
-	echo " desc: Creates a crontab to reboot host if uptime is greater "
-	echo "     : than max_days, or if file '/var/run/reboot-required' "
+	echo "usage: $PRG max_days [hour=$reboot_hour [min=$reboot_min [dow=$reboot_dow]]]"
+	echo " desc: Creates a cron job to reboot host if uptime is greater "
+	echo "     : than max_days, or if file '$reboot_required_file' "
 	echo "     : exists. Requires root or sudo access."
 	echo "   eg: # reboot at 04:05 on a Sunday if uptime > 14 days"
-	echo "     : reboot_required 14 4 5 sunday"
+	echo "     : $PRG 14 4 5 sunday"
 	echo "     : # reboot at 17:00 if uptime > 7 days"
-	echo "     : reboot_required 7 17"
+	echo "     : $PRG 7 17"
 	exit 0
 fi
 
+# print error message and exit 1
 die() {
-	echo >&2 'error:' "$*"
+	>&2 echo "$PRG: error:" "$*"
 	exit 1
 }
 
-((EUID)) && {
-  sudo -ln &> /dev/null || die 'Requires sudo/root privileges.'
-}
+# Check for necessary privileges
+((EUID)) && { sudo -ln &> /dev/null || die 'Requires sudo/root privileges.'; }
 
-max_days=$(($1))
+# Validate and set variables
+declare -i max_days=${1:-0}
 (( max_days > 366 || max_days < 0 )) \
 		&& die "Invalid max_days ($max_days)"
-reboot_hour=${2:-1}
+declare -i reboot_hour=${2:-1}
 (( reboot_hour > 23 || reboot_hour < 0 )) \
 		&& die "Invalid hour ($reboot_hour)"
-reboot_min=${3:-0}
+declare -i reboot_min=${3:-0}
 (( reboot_min > 59 || reboot_min < 0 )) \
 		&& die "Invalid minute ($reboot_min)"
-
-reboot_dow=${4:-'*'}
+declare -- reboot_dow=${4:-'*'}
 if [[ "$reboot_dow" =~ ^[0-7]$ ]]; then
-	reboot_dow=${dow[$reboot_dow]:0:3}
+	reboot_dow=${dow[$reboot_dow]}
 elif [[ $reboot_dow != '*' ]]; then
 	reboot_dow=${reboot_dow:0:3}
 	reboot_dow=${reboot_dow,,}; reboot_dow=${reboot_dow^}
-	[[ "${dow[*]}" == *${reboot_dow}* ]] || die 'Invalid day of week.'
+	[[ " ${dow[*]} " == *" $reboot_dow "* ]] || die 'Invalid day of week.'
 fi
 
 # read uptime value
-read -r uptime _ < /proc/uptime
+read -r uptime _ < $uptime_file
 # remove decimal part and convert to days
 uptime_days=$(( ${uptime%%.*} / 86400 ))
 
-if (( uptime_days > max_days )) || [[ -f /var/run/reboot-required ]]; then
+if (( uptime_days > max_days )) || [[ -f $reboot_required_file ]]; then
   # Create the cron job content
   cron_job_content="$reboot_min $reboot_hour * * $reboot_dow root /sbin/shutdown -r +1 && rm -f '$cron_job_file'"
   # Write the cron job to the file 
 	echo "$cron_job_content" | sudo tee "$cron_job_file" > /dev/null
   # Set appropriate permissions
   sudo -n chmod 0644 "$cron_job_file"
+	cat "$cron_job_file"
   printf "Crontab '%s' created.\nHost '%s' will reboot at %02d:%02d%s\n" \
   		"$cron_job_file" "$HOSTNAME" "$reboot_hour" "$reboot_min" \
   		"$([[ $reboot_dow == '*' ]] && echo -n '.' || echo " on ${reboot_dow}.")"
-	cat "$cron_job_file"
 else
-	printf 'Host %s has been up for %s days.\n/var/run/reboot-required was not detected.\nReboot is therefore not required.\n' "$HOSTNAME" "$uptime_days"
+	printf "Host %s has been up for %s days.\n$reboot_required_file was not detected.\nReboot is therefore not required.\n" "$HOSTNAME" "$uptime_days"
 fi
 
 #fin
