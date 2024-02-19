@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+#shellcheck disable=SC2155
 declare -r PRG0=$(readlink -en -- "$0")
 declare -r PRG="${PRG0##*/}"
 
@@ -15,12 +16,15 @@ declare -- uptime='' reboot_dow='*'
 # Help
 if (($# == 0)) || [[ "${1:-}" == '-h' || "${1:-}" == '--help' ]]; then
 	echo "usage: $PRG max_days [hour=$reboot_hour [min=$reboot_min [dow=$reboot_dow]]]"
-	echo " desc: Creates a cron job to reboot host if uptime is greater "
+	echo "     :"
+	echo " desc: Schedule a cron job to reboot host if uptime is greater "
 	echo "     : than max_days, or if file '$reboot_required_file' "
 	echo "     : exists. Requires root or sudo access."
-	echo "   eg: # reboot at 04:05 on a Sunday if uptime > 14 days"
+	echo "     :"
+	echo "   eg: # if uptime > 14 days then reboot at 04:05 on a Sunday"
 	echo "     : $PRG 14 4 5 sunday"
-	echo "     : # reboot at 17:00 if uptime > 7 days"
+	echo "     :"
+	echo "     : # if uptime > 7 days then reboot at the next 17:00"
 	echo "     : $PRG 7 17"
 	exit 0
 fi
@@ -70,7 +74,9 @@ if (( uptime_days > max_days )) || [[ -f $reboot_required_file ]]; then
   		"$cron_job_file" "$HOSTNAME" "$reboot_hour" "$reboot_min" \
   		"$([[ $reboot_dow == '*' ]] && echo -n '.' || echo " on ${reboot_dow}.")"
 else
-	printf "Host %s has been up for %s days.\nFile $reboot_required_file was not detected.\nReboot is therefore not required.\n" "$HOSTNAME" "$uptime_days"
+	printf "Host %s has been up for %s days.\n" "$HOSTNAME" "$uptime_days"
+	printf "File %s was not detected.\n" "$reboot_required_file"
+	printf "Reboot is not required.\n"
 fi
 
 #fin
