@@ -5,16 +5,18 @@ set -euo pipefail
 declare -r PRG0=$(readlink -en -- "$0")
 declare -r PRG="${PRG0##*/}"
 
-declare -r  cron_job_file=/etc/cron.d/reboot_uptime_days_gt_max_days
-declare -r  reboot_required_file=/var/run/reboot-required
-declare -r  uptime_file=/proc/uptime
+declare -r cron_job_file=/etc/cron.d/reboot_uptime_days_gt_max_days
+declare -r reboot_required_file=/var/run/reboot-required
+declare -r uptime_file=/proc/uptime
 declare -ar dow=( Sun Mon Tue Wed Thu Fri Sat Sun )
 
 declare -i uptime_days=0 max_days=0 reboot_hour=1 reboot_min=0
 declare -- uptime='' reboot_dow='*'
 
+declare -r host="${HOSTNAME:-$(hostname)}"
+
 # Help
-if (($# == 0)) || [[ "${1:-}" == '-h' || "${1:-}" == '--help' ]]; then
+if (($# == 0)) || [[ "$*" == *'-h'* || "$*" == *'--help'* ]]; then
 	echo "usage: $PRG max_days [hour=$reboot_hour [min=$reboot_min [dow=$reboot_dow]]]"
 	echo "     :"
 	echo " desc: Schedule a cron job to reboot host if uptime is greater "
@@ -74,7 +76,7 @@ if (( uptime_days > max_days )) || [[ -f $reboot_required_file ]]; then
   		"$cron_job_file" "$HOSTNAME" "$reboot_hour" "$reboot_min" \
   		"$([[ $reboot_dow == '*' ]] && echo -n '.' || echo " on ${reboot_dow}.")"
 else
-	printf "Host %s has been up for %s days.\n" "$HOSTNAME" "$uptime_days"
+	printf "Host %s has been up for %s days.\n" "$host" "$uptime_days"
 	printf "File %s was not detected.\n" "$reboot_required_file"
 	printf "Reboot is not required.\n"
 fi
